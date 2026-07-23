@@ -1,0 +1,87 @@
+name: Build IDnSpy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore IDnSpy/IDnSpy.csproj
+
+      - name: Build
+        run: dotnet build IDnSpy/IDnSpy.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish IDnSpy/IDnSpy.csproj -c Release -r win-x64 --self-contained false -o artifacts/win-x64 --no-restore
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IDnSpy-win-x64
+          path: artifacts/win-x64/
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore IDnSpy/IDnSpy.csproj
+
+      - name: Build
+        run: dotnet build IDnSpy/IDnSpy.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish IDnSpy/IDnSpy.csproj -c Release -r linux-x64 --self-contained false -o artifacts/linux-x64 --no-restore
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IDnSpy-linux-x64
+          path: artifacts/linux-x64/
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore IDnSpy/IDnSpy.csproj
+
+      - name: Build
+        run: dotnet build IDnSpy/IDnSpy.csproj -c Release --no-restore
+
+      - name: Publish
+        run: dotnet publish IDnSpy/IDnSpy.csproj -c Release -r osx-arm64 --self-contained false -o artifacts/osx-arm64 --no-restore
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IDnSpy-osx-arm64
+          path: artifacts/osx-arm64/

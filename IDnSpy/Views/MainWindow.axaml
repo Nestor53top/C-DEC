@@ -1,0 +1,141 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:IDnSpy.ViewModels"
+        xmlns:views="using:IDnSpy.Views"
+        x:Class="IDnSpy.Views.MainWindow"
+        Title="{Binding Title}"
+        Width="1400" Height="900"
+        WindowStartupLocation="CenterScreen"
+        Background="#1e1e1e">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <!-- Menu Bar -->
+        <Menu DockPanel.Dock="Top" Background="#2d2d2d">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open Assembly..." Command="{Binding OpenAssemblyCommand}" InputGesture="Ctrl+O" />
+                <Separator />
+                <MenuItem Header="E_xit" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Search..." Command="{Binding SearchInCodeCommand}" InputGesture="Ctrl+F" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Decompile" />
+                <MenuItem Header="_IL Code" />
+                <MenuItem Header="_Hex View" />
+                <MenuItem Header="_Assembly Info" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About IDnSpy" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Background="#252526" Padding="4">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Open" Command="{Binding OpenAssemblyCommand}" Padding="8,4"
+                        Background="#0e639c" Foreground="White" BorderThickness="0" />
+                <TextBlock Text="Search:" VerticalAlignment="Center" Foreground="#cccccc" />
+                <TextBox Text="{Binding SearchText}" Width="250" VerticalAlignment="Center"
+                         Background="#3c3c3c" Foreground="#cccccc" BorderBrush="#555"
+                         Watermark="Search types/methods..." />
+                <Button Content="Find" Command="{Binding SearchInCodeCommand}" Padding="8,4"
+                        Background="#0e639c" Foreground="White" BorderThickness="0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Status Bar -->
+        <Border DockPanel.Dock="Bottom" Background="#007acc" Padding="6,2">
+            <TextBlock Text="{Binding StatusBarText}" Foreground="White" FontSize="12" />
+        </Border>
+
+        <!-- Main Content -->
+        <Grid ColumnDefinitions="320,*">
+            <!-- Left Panel: Assembly Tree -->
+            <Border Grid.Column="0" Background="#252526" BorderBrush="#333" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Assembly Explorer" FontWeight="Bold"
+                               Foreground="#cccccc" Padding="8,6" Background="#2d2d2d" />
+                    <ScrollViewer>
+                        <ListBox ItemsSource="{Binding Types}"
+                                 Background="#1e1e1e" Foreground="#cccccc"
+                                 SelectionChanged="TypeList_SelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding Kind}" FontSize="10"
+                                                   Foreground="#569cd6" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Foreground="#666" VerticalAlignment="Center">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="({0}M {1}P {2}F {3}E)">
+                                                    <Binding Path="MethodCount" />
+                                                    <Binding Path="PropertyCount" />
+                                                    <Binding Path="FieldCount" />
+                                                    <Binding Path="EventCount" />
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- Right Panel: Tabs -->
+            <TabControl Grid.Column="1" SelectedIndex="{Binding SelectedTabIndex}"
+                        Background="#1e1e1e" Foreground="#cccccc">
+                <!-- Decompiled C# -->
+                <TabItem Header="Decompiled C#">
+                    <Grid>
+                        <TextBlock Text="{Binding DecompiledCode}"
+                                   FontFamily="Cascadia Code,Consolas,Courier New"
+                                   FontSize="13" Foreground="#d4d4d4"
+                                   TextWrapping="Wrap" Padding="12"
+                                   IsVisible="{Binding !IsLoading}" />
+                        <TextBlock Text="Loading..." IsVisible="{Binding IsLoading}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="#888" FontSize="18" />
+                    </Grid>
+                </TabItem>
+
+                <!-- Assembly Info -->
+                <TabItem Header="Assembly Info">
+                    <TextBox Text="{Binding AssemblyInfoText}"
+                             FontFamily="Cascadia Code,Consolas,Courier New"
+                             FontSize="13" Foreground="#d4d4d4"
+                             Background="#1e1e1e" IsReadOnly="True"
+                             TextWrapping="Wrap" AcceptsReturn="True"
+                             Padding="12" />
+                </TabItem>
+
+                <!-- Hex View -->
+                <TabItem Header="Hex View">
+                    <ScrollViewer>
+                        <TextBlock Text="{Binding HexDump}"
+                                   FontFamily="Cascadia Code,Consolas,Courier New"
+                                   FontSize="12" Foreground="#d4d4d4"
+                                   TextWrapping="NoWrap" Padding="12" />
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- IL Code -->
+                <TabItem Header="IL Code">
+                    <ScrollViewer>
+                        <TextBlock Text="{Binding IlCode}"
+                                   FontFamily="Cascadia Code,Consolas,Courier New"
+                                   FontSize="13" Foreground="#d4d4d4"
+                                   TextWrapping="Wrap" Padding="12" />
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </DockPanel>
+</Window>

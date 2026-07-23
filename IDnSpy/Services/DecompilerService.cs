@@ -2,9 +2,11 @@ using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
+using System.Linq;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.TypeSystem;
+using ICSharpCode.Decompiler.Metadata;
 
 namespace IDnSpy.Services;
 
@@ -47,25 +49,44 @@ public class DecompilerService
         var settings = CreateDefaultSettings();
         var decompiler = new CSharpDecompiler(filePath, settings);
         var module = decompiler.TypeSystem.MainModule;
+        var metadataFile = module.MetadataFile;
+
+        string peInfo = "";
+        if (metadataFile is PEFile peFile)
+        {
+            var headers = peFile.Reader.PEHeaders;
+            peInfo = headers.CoffHeader.Machine.ToString();
+        }
+
+        string targetFramework = "";
+        try
+        {
+            targetFramework = metadataFile.DetectTargetFrameworkId() ?? "Unknown";
+        }
+        catch
+        {
+            targetFramework = "Unknown";
+        }
 
         var info = new AssemblyInfo
         {
             FileName = Path.GetFileName(filePath),
             FullPath = filePath,
             AssemblyName = module.AssemblyName ?? "Unknown",
-            ModuleKind = module.Metadata.PEHeaders.PEHeader.Magic.ToString(),
-            ProcessorArchitecture = module.Metadata.PEHeaders.CoffHeader.Machine.ToString(),
-            PEKind = module.Metadata.PEHeaders.PEHeader.Magic.ToString(),
-            TargetFramework = module.Metadata.DetectTargetFrameworkId() ?? "Unknown",
-            MetadataVersion = module.Metadata.PEHeaders.MetadataVersion ?? "Unknown",
+            ModuleKind = metadataFile.Kind.ToString(),
+            ProcessorArchitecture = peInfo,
+            PEKind = peInfo,
+            TargetFramework = targetFramework,
+            MetadataVersion = metadataFile.Metadata.MetadataVersion ?? "Unknown",
             Types = new List<TypeEntry>()
         };
 
         foreach (var type in module.TypeDefinitions)
         {
             string baseTypeName = "";
-            if (type.BaseType != null)
-                baseTypeName = type.BaseType.FullName;
+            var baseType = type.DirectBaseTypes.FirstOrDefault();
+            if (baseType != null)
+                baseTypeName = baseType.FullName;
 
             var entry = new TypeEntry
             {
@@ -74,10 +95,10 @@ public class DecompilerService
                 BaseType = baseTypeName,
                 Namespace = type.Namespace ?? "",
                 IsPublic = type.Accessibility == Accessibility.Public || type.Accessibility == Accessibility.Internal,
-                MethodCount = type.Methods.Count,
-                PropertyCount = type.Properties.Count,
-                FieldCount = type.Fields.Count,
-                EventCount = type.Events.Count
+                MethodCount = type.Methods.Count(),
+                PropertyCount = type.Properties.Count(),
+                FieldCount = type.Fields.Count(),
+                EventCount = type.Events.Count()
             };
             info.Types.Add(entry);
         }

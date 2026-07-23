@@ -6,7 +6,7 @@ using System.Linq;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.TypeSystem;
-using ICSharpCode.Decompiler.Metadata;
+
 
 namespace IDnSpy.Services;
 
@@ -49,44 +49,26 @@ public class DecompilerService
         var settings = CreateDefaultSettings();
         var decompiler = new CSharpDecompiler(filePath, settings);
         var module = decompiler.TypeSystem.MainModule;
-        var metadataFile = module.MetadataFile;
-
-        string peInfo = "";
-        if (metadataFile is PEFile peFile)
-        {
-            var headers = peFile.Reader.PEHeaders;
-            peInfo = headers.CoffHeader.Machine.ToString();
-        }
-
-        string targetFramework = "";
-        try
-        {
-            targetFramework = metadataFile.DetectTargetFrameworkId() ?? "Unknown";
-        }
-        catch
-        {
-            targetFramework = "Unknown";
-        }
 
         var info = new AssemblyInfo
         {
             FileName = Path.GetFileName(filePath),
             FullPath = filePath,
             AssemblyName = module.AssemblyName ?? "Unknown",
-            ModuleKind = metadataFile.Kind.ToString(),
-            ProcessorArchitecture = peInfo,
-            PEKind = peInfo,
-            TargetFramework = targetFramework,
-            MetadataVersion = metadataFile.Metadata.MetadataVersion ?? "Unknown",
+            ModuleKind = "Metadata",
+            ProcessorArchitecture = "Unknown",
+            PEKind = "Unknown",
+            TargetFramework = "Unknown",
+            MetadataVersion = "Unknown",
             Types = new List<TypeEntry>()
         };
 
         foreach (var type in module.TypeDefinitions)
         {
             string baseTypeName = "";
-            var baseType = type.DirectBaseTypes.FirstOrDefault();
-            if (baseType != null)
-                baseTypeName = baseType.FullName;
+            var baseTypes = type.DirectBaseTypes.ToList();
+            if (baseTypes.Count > 0)
+                baseTypeName = baseTypes[0].FullName;
 
             var entry = new TypeEntry
             {

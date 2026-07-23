@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.TypeSystem;
@@ -51,23 +52,27 @@ public class DecompilerService
         {
             FileName = Path.GetFileName(filePath),
             FullPath = filePath,
-            AssemblyName = module.AssemblyName,
-            ModuleKind = module.Kind.ToString(),
+            AssemblyName = module.AssemblyName ?? "Unknown",
+            ModuleKind = module.Metadata.PEHeaders.PEHeader.Magic.ToString(),
             ProcessorArchitecture = module.Metadata.PEHeaders.CoffHeader.Machine.ToString(),
             PEKind = module.Metadata.PEHeaders.PEHeader.Magic.ToString(),
-            TargetFramework = module.Metadata.DetectTargetFrameworkId(),
-            MetadataVersion = module.Metadata.PEHeaders.MetadataVersion,
-            Types = new System.Collections.Generic.List<TypeEntry>()
+            TargetFramework = module.Metadata.DetectTargetFrameworkId() ?? "Unknown",
+            MetadataVersion = module.Metadata.PEHeaders.MetadataVersion ?? "Unknown",
+            Types = new List<TypeEntry>()
         };
 
         foreach (var type in module.TypeDefinitions)
         {
+            string baseTypeName = "";
+            if (type.BaseType != null)
+                baseTypeName = type.BaseType.FullName;
+
             var entry = new TypeEntry
             {
                 Name = type.FullName,
                 Kind = type.Kind.ToString(),
-                BaseType = type.BaseType?.FullName ?? "",
-                Namespace = type.Namespace,
+                BaseType = baseTypeName,
+                Namespace = type.Namespace ?? "",
                 IsPublic = type.Accessibility == Accessibility.Public || type.Accessibility == Accessibility.Internal,
                 MethodCount = type.Methods.Count,
                 PropertyCount = type.Properties.Count,
@@ -155,7 +160,7 @@ public class DecompilerService
 
     private static DecompilerSettings CreateDefaultSettings()
     {
-        return new DecompilerSettings(LanguageVersion.CSharp12_0)
+        return new DecompilerSettings(LanguageVersion.CSharp11_0)
         {
             ThrowOnAssemblyResolveErrors = false
         };
@@ -172,7 +177,7 @@ public class AssemblyInfo
     public string PEKind { get; set; } = "";
     public string TargetFramework { get; set; } = "";
     public string MetadataVersion { get; set; } = "";
-    public System.Collections.Generic.List<TypeEntry> Types { get; set; } = new();
+    public List<TypeEntry> Types { get; set; } = new();
 }
 
 public class TypeEntry

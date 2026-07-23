@@ -28,11 +28,40 @@ jobs:
       - name: Publish
         run: dotnet publish IDnSpy/IDnSpy.csproj -c Release -r win-x64 --self-contained -o artifacts/win-x64
 
+      - name: Run app and take screenshot
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+
+          $exePath = Join-Path $PWD "artifacts\win-x64\IDnSpy.exe"
+          $screenshotPath = Join-Path $PWD "artifacts\screenshot.png"
+
+          $proc = Start-Process -FilePath $exePath -PassThru
+          Start-Sleep -Seconds 5
+
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bitmap = New-Object System.Drawing.Bitmap($bounds.Width, $bounds.Height)
+          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $bitmap.Save($screenshotPath, [System.Drawing.Imaging.ImageFormat]::Png)
+          $graphics.Dispose()
+          $bitmap.Dispose()
+
+          $proc.Kill()
+          Write-Host "Screenshot saved to $screenshotPath"
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: IDnSpy-win-x64
           path: artifacts/win-x64/
+
+      - name: Upload screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot
+          path: artifacts/screenshot.png
 
   build-linux:
     runs-on: ubuntu-latest
@@ -85,52 +114,3 @@ jobs:
         with:
           name: IDnSpy-osx-arm64
           path: artifacts/osx-arm64/
-
-  generate-screenshot:
-    runs-on: ubuntu-latest
-    needs: [build-linux]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: IDnSpy-linux-x64
-          path: artifact
-
-      - name: Generate README with build info
-        run: |
-          echo "# IDnSpy - Build Successful" > BUILD_INFO.md
-          echo "" >> BUILD_INFO.md
-          echo "## Artifacts" >> BUILD_INFO.md
-          echo "" >> BUILD_INFO.md
-          echo "| Platform | File |" >> BUILD_INFO.md
-          echo "|----------|------|" >> BUILD_INFO.md
-          echo "| Windows x64 | IDnSpy-win-x64.zip |" >> BUILD_INFO.md
-          echo "| Linux x64 | IDnSpy-linux-x64.zip |" >> BUILD_INFO.md
-          echo "| macOS ARM64 | IDnSpy-osx-arm64.zip |" >> BUILD_INFO.md
-          echo "" >> BUILD_INFO.md
-          echo "## Screenshot" >> BUILD_INFO.md
-          echo "" >> BUILD_INFO.md
-          echo "IDnSpy is a cross-platform GUI application built with Avalonia UI." >> BUILD_INFO.md
-          echo "Download the artifact for your platform and run the executable." >> BUILD_INFO.md
-          echo "" >> BUILD_INFO.md
-          echo "### Windows: \`IDnSpy.exe\`" >> BUILD_INFO.md
-          echo "### Linux: \`chmod +x IDnSpy && ./IDnSpy\`" >> BUILD_INFO.md
-          echo "### macOS: \`chmod +x IDnSpy && ./IDnSpy\`" >> BUILD_INFO.md
-          echo "" >> BUILD_INFO.md
-          echo "![IDnSpy](https://raw.githubusercontent.com/Nestor53top/C-DEC/main/IDnSpy/screenshot.png)" >> BUILD_INFO.md
-          echo "" >> BUILD_INFO.md
-          echo "Build: ${{ github.sha }}" >> BUILD_INFO.md
-
-      - name: Upload build info
-        uses: actions/upload-artifact@v4
-        with:
-          name: BUILD_INFO
-          path: BUILD_INFO.md
